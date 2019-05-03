@@ -1,2 +1,4 @@
-# url_provider
-Service for making short links
+# Usage:
+```
+sudo docker-compose up .
+```
