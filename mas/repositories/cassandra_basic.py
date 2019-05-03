@@ -20,6 +20,7 @@ import datetime
 _cluster = None
 _session = None
 _prepared_get_url_by_key = None
+_prepared_get_random_key_by_url = None
 _prepared_insert_url_random_key = None
 _prepared_insert_url_key = None
 
@@ -42,7 +43,7 @@ def get_session() -> Session:
     return _session
 
 
-async def _get_prepared_future(query: str) -> Any:
+async def _get_prepared_future_async(query: str) -> Any:
     session = get_session()
     return await session.prepare_future(query)
 
@@ -50,16 +51,24 @@ async def _get_prepared_future(query: str) -> Any:
 async def _prepare_get_url_by_key():
     global _prepared_get_url_by_key
     if _prepared_get_url_by_key is None:
-        _prepared_get_url_by_key = await _get_prepared_future('SELECT * FROM key_to_url WHERE key=?')
+        _prepared_get_url_by_key = await _get_prepared_future_async('SELECT * FROM key_to_url WHERE key=?')
     return _prepared_get_url_by_key
+
+
+async def _prepare_get_random_key_by_url():
+    global _prepared_get_random_key_by_url
+    if _prepared_get_random_key_by_url is None:
+        _prepared_get_random_key_by_url = await _get_prepared_future_async('SELECT * FROM url_to_random_key WHERE url=?')
+    return _prepared_get_random_key_by_url
 
 
 async def _prepare_insert_url_key():
     global _prepared_insert_url_key
     if _prepared_insert_url_key is None:
-        _prepared_insert_url_key = await _get_prepared_future(
-            '''INSERT INTO key_to_url (url, key, operation_id)
-            VALUES (?, ?, ?)'''
+        _prepared_insert_url_key = await _get_prepared_future_async(
+            '''INSERT INTO key_to_url (url, key)
+            VALUES (?, ?)
+            IF NOT EXISTS;'''
         )
     return _prepared_insert_url_key
 
@@ -67,7 +76,7 @@ async def _prepare_insert_url_key():
 async def _prepare_insert_url_random_key():
     global _prepared_insert_url_random_key
     if _prepared_insert_url_random_key is None:
-        _prepared_insert_url_random_key = await _get_prepared_future(
+        _prepared_insert_url_random_key = await _get_prepared_future_async(
             '''INSERT INTO url_to_random_key (url, key)
             VALUES (?, ?)'''
         )
@@ -95,20 +104,63 @@ async def get_url_by_key(
     return result
 
 
+async def get_random_key_by_url(
+        *,
+        url: str
+) -> Iterable[Any]:
+    prepared = await _prepare_get_random_key_by_url()
+    session = get_session()
+    result = await session.execute_future(prepared, parameters=[url])
+    return result
+
+
 async def add_custom_key(
         *,
         url: str,
         custom_key: str,
         operation_id: Union[uuid.UUID, None] = None
-) -> bool:
+) -> Any:
     prepared = await _prepare_insert_url_key()
     session = get_session()
     result = await session.execute_future(
         prepared,
         parameters=[
             url,
-            custom_key,
-            operation_id if operation_id is not None else datetime.datetime.now()
+            custom_key
+        ]
+    )
+    return result
+
+
+async def add_url_random_key(
+        *,
+        url: str,
+        random_key: str
+) -> Any:
+    prepared = await _prepare_insert_url_random_key()
+    session = get_session()
+    result = await session.execute_future(
+        prepared,
+        parameters=[
+            url,
+            random_key
+        ]
+    )
+    return result
+
+
+async def add_url_random_key(
+        *,
+        url: str,
+        random_key: str
+) -> Any:
+    prepared = await _prepare_insert_url_random_key()
+    session = get_session()
+    result = await session.execute_future(
+        prepared,
+        parameters=[
+            url,
+            random_key
         ]
     )
     return result

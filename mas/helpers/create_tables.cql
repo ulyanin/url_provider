@@ -7,8 +7,7 @@ CREATE KEYSPACE IF NOT EXISTS url_provider
 CREATE TABLE url_provider.url_to_random_key (
     url TEXT,
     key text,
-    PRIMARY KEY (url, key))
-WITH CLUSTERING ORDER BY (key DESC);
+    PRIMARY KEY (url));
 
 
 CREATE TABLE url_provider.key_to_url (
@@ -27,5 +26,6 @@ INSERT INTO url_provider.key_to_url (url, key, operation_id)
 VALUES ('http://vk.com', 'aaaaa', now())
 
 
-UPDATE url_provider.key_to_url
-SET url = 'http://vk.com', operation_id=dac995c9-4cc6-469d-bdcd-ee879a41a0e5 where key='abaca' and operation_id!=dac995c9-4cc6-469d-bdcd-ee879a41a0e5;
+INSERT INTO url_provider.key_to_url (url, key, operation_id)
+VALUES ('http://vk.com', 'aaaaa', now())
+IF NOT EXISTS;

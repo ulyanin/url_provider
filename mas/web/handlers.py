@@ -1,18 +1,16 @@
+from mas.repositories import cassandra_url_provider
+import mas.settings as settings
+
+from tornado.web import RequestHandler
+
 import json
 import urllib.parse
-from tornado.web import RequestHandler
-import tornado.gen
-import mas.helpers.cassandra as mhc
-from mas.helpers.statsd import statsd_client
-from mas.repositories import cassandra_url_provider
-
-import mas.settings as settings
 
 
 def _construct_url(url_id):
     return urllib.parse.urlunparse((
         settings.DEFAULT_SCHEMA,
-        settings.DEFAULT_HOST,
+        f'{settings.DEFAULT_HOST}:{settings.DEFAULT_PORT}',
         settings.DEFAULT_GET_ADDR + url_id,
         None,
         None,
@@ -31,7 +29,7 @@ class ApiHandler(RequestHandler):
 class TestHandler(RequestHandler):
     async def get(self):
         key = 'aaaaa'
-        ans = await cassandra_url_provider.get(url_id=key)
+        ans = await cassandra_url_provider.get_url_by_key(url_id=key)
         if ans is None:
             self.set_status(404)
             self.write({
@@ -89,33 +87,34 @@ class DoShortUrl(RequestHandler):
             self._bad_request(self.msg)
         elif self.url_to_short is None:
             self._bad_request('pass &url by get or url by POST method')
+        parsed_url = urllib.parse.urlparse(self.url_to_short)
+        if not parsed_url.scheme:
+            self.url_to_short = "http://" + self.url_to_short
 
     async def _do_request(self):
         # statsd_client.incr(self.__class__.__name__ + '.post')
         # with statsd_client.timer(self.__class__.__name__ + '.post'):
         if self.custom_key is None:
-            url_id = await cassandra_url_provider.add(
+            result = await cassandra_url_provider.add_random_key(
                 url_to_short=self.url_to_short,
             )
         else:
-            msg = await cassandra_url_provider.add_custom_key_if_not_exists(
+            result = await cassandra_url_provider.add_custom_key_if_not_exists(
                 url_to_short=self.url_to_short,
                 custom_key=self.custom_key
             )
-            url_id = self.custom_key
-            if msg:
-                self.set_status(409)  # conflict
-                self.write({
-                    'msg': msg,
-                    'status': 'err',
-                })
-                self.finish()
-                return
-        self.write({
-            'short_url': _construct_url(url_id),
-            'status': 'ok',
-        })
-        self.set_status(200)
+        if not result.success:
+            self.set_status(409)  # conflict
+            self.write({
+                'msg': result.msg,
+                'status': 'err',
+            })
+        else:
+            self.set_status(200)
+            self.write({
+                'short_url': _construct_url(result.key),
+                'status': 'ok',
+            })
         self.finish()
 
     async def post(self, *args, **kwargs):
@@ -134,7 +133,7 @@ class GetShortUrl(RequestHandler):
                 'msg': 'path is empty'
             })
         key = path
-        ans = await cassandra_url_provider.get(url_id=key)
+        ans = await cassandra_url_provider.get_url_by_key(url_id=key)
         if ans is None:
             self.set_status(404)
             self.write({
