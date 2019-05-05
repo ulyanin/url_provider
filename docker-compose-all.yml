@@ -1,4 +1,4 @@
-version: "3"
+version: "2.0"
 
 services:
   cassandra-seed:
@@ -53,6 +53,7 @@ services:
     build: .
     networks:
       - cassandra-net
+      - grafana-net
     ports:
       - "3030:3030"
 
@@ -82,3 +83,4 @@ volumes:
 networks:
   cassandra-net:
   grafana-net:
+

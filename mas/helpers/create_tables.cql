@@ -13,7 +13,6 @@ CREATE TABLE url_provider.url_to_random_key (
 CREATE TABLE url_provider.key_to_url (
     key TEXT,
     url TEXT,
-    operation_id UUID,
     PRIMARY KEY (key)
 );
 
@@ -22,10 +21,5 @@ INSERT INTO url_provider.url_to_random_key (url, key)
 VALUES ('http://vk.com', 'aaaaa');
 
 
-INSERT INTO url_provider.key_to_url (url, key, operation_id)
-VALUES ('http://vk.com', 'aaaaa', now())
-
-
-INSERT INTO url_provider.key_to_url (url, key, operation_id)
-VALUES ('http://vk.com', 'aaaaa', now())
-IF NOT EXISTS;
+INSERT INTO url_provider.key_to_url (url, key)
+VALUES ('http://vk.com', 'aaaaa');

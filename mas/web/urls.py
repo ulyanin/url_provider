@@ -1,11 +1,12 @@
 from tornado.web import RequestHandler
 from typing import List, Tuple
 
-from mas.web.handlers import PingHandler, DoShortUrl, GetShortUrl, ApiHandler, TestHandler
+from mas.web.handlers import PingHandler, DoShortUrl, GetShortUrl, ApiHandler, TestHandler, ErrorHandler
 
 ping_url = (r'/ping/', PingHandler)
 
 custom_urls = [
+    (r'/', ErrorHandler),
     (r'/add', DoShortUrl),
     (r'/get/([^/]+)[/]{0,1}', GetShortUrl),
     (r'/api/([^/]+)[/]{0,1}', ApiHandler),

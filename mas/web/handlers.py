@@ -1,10 +1,13 @@
 from mas.repositories import cassandra_url_provider
 import mas.settings as settings
 
+from mas.helpers.statsd import statsd_client
+
 from tornado.web import RequestHandler
 
 import json
 import urllib.parse
+import traceback
 
 
 def _construct_url(url_id):
@@ -16,6 +19,31 @@ def _construct_url(url_id):
         None,
         None
     ))
+
+
+class ErrorHandler(RequestHandler):
+    def write_error(self, status_code, **kwargs):
+        if status_code == 500:
+            self.set_header('Content-Type', 'application/json')
+            if self.settings.get("serve_traceback") and "exc_info" in kwargs:
+                # in debug mode, try to send a traceback
+                lines = []
+                for line in traceback.format_exception(*kwargs["exc_info"]):
+                    lines.append(line)
+                self.finish(json.dumps({
+                    'error': {
+                        'code': status_code,
+                        'message': self._reason,
+                        'traceback': lines,
+                    }
+                }))
+            else:
+                self.finish(json.dumps({
+                    'error': {
+                        'code': status_code,
+                        'message': self._reason,
+                    }
+                }))
 
 
 class ApiHandler(RequestHandler):
@@ -118,14 +146,22 @@ class DoShortUrl(RequestHandler):
         self.finish()
 
     async def post(self, *args, **kwargs):
-        return await self._do_request()
+        statsd_client.incr(self.__class__.__name__ + '.post')
+        with statsd_client.timer(self.__class__.__name__ + '.post.time'):
+            return await self._do_request()
 
     async def get(self, *args, **kwargs):
-        return await self._do_request()
+        statsd_client.incr(self.__class__.__name__ + '.get')
+        with statsd_client.timer(self.__class__.__name__ + '.get.time'):
+            return await self._do_request()
 
 
 class GetShortUrl(RequestHandler):
+
+    @statsd_client.timer('GetShortUrl.get.time')
     async def get(self, path, *args, **kwargs):
+        print()
+        statsd_client.incr(self.__class__.__name__ + '.post')
         if not path:
             self.set_status(400)
             self.write({

@@ -1,5 +1,5 @@
 # server
-DEFAULT_PORT = 8000
+DEFAULT_PORT = 3030
 DEFAULT_HOST = 'localhost'
 DEFAULT_SCHEMA = 'http'
 DEFAULT_GET_ADDR = '/get/'
@@ -8,8 +8,13 @@ DEFAULT_GET_ADDR = '/get/'
 DEFAULT_RANDOM_KEY_LENGTH = 6
 
 # cassandra
+CASSANDRA_HOSTS = (
+    'localhost',  # on host
+    'cassandra-seed'  # in docker-compose
+)
+
 CASSANDRA_CONNECTION_CONF = {
-    'contact_points': ('localhost',),
+    'contact_points': CASSANDRA_HOSTS,
     'executor_threads': 8,
 }
 

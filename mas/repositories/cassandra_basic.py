@@ -32,12 +32,11 @@ def read_initial_script() -> str:
 
 def get_session() -> Session:
     global _session, _cluster
-    if _cluster is None:
+    if _cluster is None or _session is None:
         _cluster = Cluster(
             **CASSANDRA_CONNECTION_CONF,
             load_balancing_policy=cassandra.policies.RoundRobinPolicy()
         )
-    if _session is None:
         _session = _cluster.connect('url_provider')
         aiosession(_session)
     return _session

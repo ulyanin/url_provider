@@ -8,8 +8,4 @@ _letters = string.ascii_letters + string.digits
 
 def random_string(string_length=settings.DEFAULT_RANDOM_KEY_LENGTH):
     """Generates a random string of fixed length """
-    return ''.join(random.choices(_letters, string_length))
-
-def random_string(string_length=7):
-    """Generates a random string of fixed length """
     return ''.join(random.choices(population=_letters, k=string_length))
