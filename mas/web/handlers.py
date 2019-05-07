@@ -2,6 +2,7 @@ from mas.repositories import cassandra_url_provider
 import mas.settings as settings
 
 from mas.helpers.statsd import statsd_client
+import mas.repositories.cacher as cacher
 
 from tornado.web import RequestHandler
 
@@ -23,7 +24,11 @@ def _construct_url(url_id):
 
 class ErrorHandler(RequestHandler):
     def write_error(self, status_code, **kwargs):
-        if status_code == 500:
+        status_code_hundr = str(status_code // 100)
+        statsd_client.incr(self.__class__.__name__ + f'.write_error.{status_code}.count')
+        statsd_client.incr(self.__class__.__name__ + f'.write_error.{status_code_hundr}xx.count')
+
+        if status_code_hundr == 5:
             self.set_header('Content-Type', 'application/json')
             if self.settings.get("serve_traceback") and "exc_info" in kwargs:
                 # in debug mode, try to send a traceback
@@ -74,9 +79,8 @@ class PingHandler(RequestHandler):
         'status': 'ok'
     }
 
-    # @statsd_client.timer('ping-handler.execution-time')
+    @statsd_client.timer('ping-handler.execution-time')
     def get(self):
-        # statsd_client.incr(self.__class__.__name__ + '.request')
         self.write(self._response)
         self.set_status(200)
         self.finish()
@@ -123,8 +127,10 @@ class DoShortUrl(RequestHandler):
         # statsd_client.incr(self.__class__.__name__ + '.post')
         # with statsd_client.timer(self.__class__.__name__ + '.post'):
         if self.custom_key is None:
+            redis = self.application.redis_url_to_random_key
             result = await cassandra_url_provider.add_random_key(
                 url_to_short=self.url_to_short,
+                redis=redis
             )
         else:
             result = await cassandra_url_provider.add_custom_key_if_not_exists(
@@ -146,35 +152,35 @@ class DoShortUrl(RequestHandler):
         self.finish()
 
     async def post(self, *args, **kwargs):
-        statsd_client.incr(self.__class__.__name__ + '.post')
+        statsd_client.incr(self.__class__.__name__ + '.post.count')
         with statsd_client.timer(self.__class__.__name__ + '.post.time'):
             return await self._do_request()
 
     async def get(self, *args, **kwargs):
-        statsd_client.incr(self.__class__.__name__ + '.get')
+        statsd_client.incr(self.__class__.__name__ + '.get.count')
         with statsd_client.timer(self.__class__.__name__ + '.get.time'):
             return await self._do_request()
 
 
 class GetShortUrl(RequestHandler):
 
-    @statsd_client.timer('GetShortUrl.get.time')
+    @statsd_client.timer('decorators.GetShortUrl.get.time')
     async def get(self, path, *args, **kwargs):
-        print()
-        statsd_client.incr(self.__class__.__name__ + '.post')
-        if not path:
-            self.set_status(400)
-            self.write({
-                'status': 'err',
-                'msg': 'path is empty'
-            })
-        key = path
-        ans = await cassandra_url_provider.get_url_by_key(url_id=key)
-        if ans is None:
-            self.set_status(404)
-            self.write({
-                'status': 'err',
-                'msg': f"id '{key}' not found",
-            })
-        else:
-            self.redirect(url=ans.url, permanent=True)
+        statsd_client.incr(self.__class__.__name__ + '.get.count')
+        with statsd_client.timer(self.__class__.__name__ + '.get.time'):
+            if not path:
+                self.set_status(400)
+                self.write({
+                    'status': 'err',
+                    'msg': 'path is empty'
+                })
+            key = path
+            ans = await cassandra_url_provider.get_url_by_key(url_id=key)
+            if ans is None:
+                self.set_status(404)
+                self.write({
+                    'status': 'err',
+                    'msg': f"id '{key}' not found",
+                })
+            else:
+                self.redirect(url=ans.url, permanent=True)

@@ -33,8 +33,21 @@ async def add_custom_key_if_not_exists(*, url_to_short: str, custom_key: str) ->
     return AddKeyResult(key=custom_key)
 
 
-async def add_random_key(*, url_to_short: str) -> AddKeyResult:
-    random_key = await cacher.get_random_key(url=url_to_short)
+async def get_random_key(*, url):
+    result = await cassandra_basic.get_random_key_by_url(url=url)
+    for first_row in result:
+        return first_row.key
+    return None
+
+
+async def add_random_key(*, url_to_short: str, redis=None) -> AddKeyResult:
+    random_key = await cacher.get_random_key(url=url_to_short, redis=redis)
+
+    if random_key is None:
+        random_key = await get_random_key(url=url_to_short)
+        if random_key is not None:
+            await cacher.add_random_key(redis=redis, random_key=random_key, url=url_to_short)
+
     if random_key is not None:
         # cache hit
         return AddKeyResult(key=random_key)
@@ -46,6 +59,7 @@ async def add_random_key(*, url_to_short: str) -> AddKeyResult:
             break
     # link random_key with url for caching
     added = await cassandra_basic.add_url_random_key(url=url_to_short, random_key=random_key)
+    await cacher.add_random_key(redis=redis, url=url_to_short, random_key=random_key)
     assert added is None
     return result
 

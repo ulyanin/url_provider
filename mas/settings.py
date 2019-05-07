@@ -9,8 +9,7 @@ DEFAULT_RANDOM_KEY_LENGTH = 6
 
 # cassandra
 CASSANDRA_HOSTS = (
-    'localhost',  # on host
-    'cassandra-seed'  # in docker-compose
+    'cassandra-seed',  # in docker-compose
 )
 
 CASSANDRA_CONNECTION_CONF = {
@@ -19,6 +18,9 @@ CASSANDRA_CONNECTION_CONF = {
 }
 
 STATSD_CONF = {
-    'host': '127.0.0.1',
-    'prefix': 'mipt.highload'
+    'host': 'graphite-statsd',
+    # 'host': '127.0.0.1',
+    'prefix': 'mipt.highload',
 }
+
+REDIS_HOST = 'redis'

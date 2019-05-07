@@ -16,5 +16,6 @@ setup(
         'requests',
         'cassandra-driver>=3.17.0',
         'aiocassandra>=2.0.1',
+        'aioredis'
     ]
 )

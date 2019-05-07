@@ -3,7 +3,7 @@ from typing import List, Tuple
 
 from mas.web.handlers import PingHandler, DoShortUrl, GetShortUrl, ApiHandler, TestHandler, ErrorHandler
 
-ping_url = (r'/ping/', PingHandler)
+ping_url = (r'/ping[/]{0,1}', PingHandler)
 
 custom_urls = [
     (r'/', ErrorHandler),
