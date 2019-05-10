@@ -26,26 +26,4 @@ INSERT INTO url_provider.url_to_random_key (url, key)
 VALUES ('http://vk.com', now());
 
 
-CREATE TABLE url_provider.dasha (
-    id_person text,
-    id_product text,
-    PRIMARY KEY (id_person, id_product));
 
-CREATE TABLE test (
-    url text,
-    key timeuuid,
-    data text,
-    PRIMARY KEY (url, key)
-)
-WITH CLUSTERING ORDER BY (key DESC);
-
-
-INSERT INTO test (url, key, data) VALUES ('vk1', now(), 'datavk1');
-
-
-CREATE TABLE test2 (
-    url text,
-    key timeuuid,
-    data text,
-    PRIMARY KEY ((url, key))
-)
